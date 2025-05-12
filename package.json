@@ -1,0 +1,53 @@
+{
+    "name": "ts-node-starter",
+    "version": "0.0.1",
+    "description": "Starter for ts-node app",
+    "main": "main.js",
+    "scripts": {
+        "start": "bun src/index.ts",
+        "build": "bun build src/index.ts --outdir dist",
+        "watch": "bun --watch src/index.ts",
+        "test": "bun test --coverage",
+        "lint": "eslint 'src/**/*.ts'",
+        "lint:fix": "eslint 'src/**/*.ts' --fix",
+        "test:watch": "bun test --coverage --watch"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "dotenv": "^16.5.0",
+        "env-var": "^7.5.0",
+        "eslint": "^7.32.0",
+        "eslint-config-prettier": "^6.15.0",
+        "eslint-plugin-prettier": "^3.4.1",
+        "prettier": "^2.8.8",
+        "serve": "^11.3.2"
+    },
+    "devDependencies": {
+        "@typescript-eslint/eslint-plugin": "^5.62.0",
+        "@typescript-eslint/parser": "^5.62.0"
+    },
+    "prettier": {
+        "semi": true,
+        "trailingComma": "all",
+        "singleQuote": true,
+        "printWidth": 80,
+        "tabWidth": 4
+    },
+    "eslintConfig": {
+        "parser": "@typescript-eslint/parser",
+        "parserOptions": {
+            "ecmaVersion": 2020,
+            "sourceType": "module"
+        },
+        "extends": [
+            "plugin:@typescript-eslint/recommended",
+            "prettier/@typescript-eslint",
+            "plugin:prettier/recommended"
+        ],
+        "rules": {}
+    },
+    "engines": {
+        "bun": "1.2.23"
+    }
+}
