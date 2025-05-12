@@ -1,10 +1,11 @@
 {
-    "name": "ts-node-starter",
+    "name": "sms-accountant",
     "version": "0.0.1",
-    "description": "Starter for ts-node app",
+    "description": "",
     "main": "main.js",
     "scripts": {
         "start": "bun src/index.ts",
+        "authGoogle": "bun src/setupGoogleAuth.ts",
         "build": "bun build src/index.ts --outdir dist",
         "watch": "bun --watch src/index.ts",
         "test": "bun test --coverage",
@@ -12,20 +13,22 @@
         "lint:fix": "eslint 'src/**/*.ts' --fix",
         "test:watch": "bun test --coverage --watch"
     },
-    "author": "",
+    "author": "Ben Mitchinson",
     "license": "ISC",
     "dependencies": {
+        "@googleapis/gmail": "^12.0.0",
         "dotenv": "^16.5.0",
         "env-var": "^7.5.0",
+        "googleapis": "^148.0.0"
+    },
+    "devDependencies": {
+        "@types/bun": "^1.2.13",
+        "@typescript-eslint/eslint-plugin": "^5.62.0",
+        "@typescript-eslint/parser": "^5.62.0",
         "eslint": "^7.32.0",
         "eslint-config-prettier": "^6.15.0",
         "eslint-plugin-prettier": "^3.4.1",
-        "prettier": "^2.8.8",
-        "serve": "^11.3.2"
-    },
-    "devDependencies": {
-        "@typescript-eslint/eslint-plugin": "^5.62.0",
-        "@typescript-eslint/parser": "^5.62.0"
+        "prettier": "^2.8.8"
     },
     "prettier": {
         "semi": true,
