@@ -8,13 +8,13 @@ Results then stored using google sheets as a backend.
 
 - [x] google auth
   - took forever but at least "bun run authGoogle" exists
-- [] add tsc checking
-- [] docker package
-- [] parse chase emails
-- [] add parse result to google sheet
-- [] mark email as "processed"
-- [] sentry logs
-- [] prompt user over sms to categorize item
+- [ ] add tsc checking
+- [ ] docker package
+- [ ] parse chase emails
+- [ ] add parse result to google sheet
+- [ ] mark email as "processed"
+- [ ] sentry logs
+- [ ] prompt user over sms to categorize item
 ... more in goal.md
 
 ### Tech
