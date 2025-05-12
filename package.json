@@ -11,7 +11,8 @@
         "test": "bun test --coverage",
         "lint": "eslint 'src/**/*.ts'",
         "lint:fix": "eslint 'src/**/*.ts' --fix",
-        "test:watch": "bun test --coverage --watch"
+        "test:watch": "bun test --coverage --watch",
+        "cicd": "bun test && eslint 'src/**/*.ts' && bun build src/index.ts --outdir dist"
     },
     "author": "Ben Mitchinson",
     "license": "ISC",
