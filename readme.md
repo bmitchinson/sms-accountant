@@ -8,6 +8,7 @@ Results then stored using google sheets as a backend.
 
 - [x] google auth
   - took forever but at least "bun run authGoogle" exists
+  - [ ] write a small blog post on that / dev.to it
 - [ ] add tsc checking
 - [ ] docker package
 - [ ] parse chase emails
