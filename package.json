@@ -5,13 +5,13 @@
     "main": "main.js",
     "scripts": {
         "start": "bun src/index.ts",
-        "build": "bun build src/index.ts --outdir dist",
+        "build": "bun build src/index.ts --outdir dist --target bun",
         "watch": "bun --watch src/index.ts",
         "test": "bun test --coverage",
         "lint": "eslint 'src/**/*.ts'",
         "lint:fix": "eslint 'src/**/*.ts' --fix",
         "test:watch": "bun test --coverage --watch",
-        "cicd": "bun test && eslint 'src/**/*.ts' && bun build src/index.ts --outdir dist"
+        "cicd": "bun run test && bun run lint && bun run build"
     },
     "author": "Ben Mitchinson",
     "license": "ISC",

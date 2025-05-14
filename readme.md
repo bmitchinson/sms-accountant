@@ -6,11 +6,9 @@ Results then stored using google sheets as a backend.
 
 ### todos
 
-- [x] google auth
-  - took forever but at least "bun run authGoogle" exists
-  - [ ] write a small blog post on that / dev.to it
+- [x] google auth - view your emails from my api as an auth test
 - [ ] add tsc checking
-- [ ] docker package
+- [x] docker package + deployed (https://budget.mitchinson.dev)
 - [ ] parse chase emails
 - [ ] add parse result to google sheet
 - [ ] mark email as "processed"
@@ -21,7 +19,7 @@ Results then stored using google sheets as a backend.
 ### Tech
 - gmail
 - twilio
-- docker / unraid (hosted at home)
+- docker / unraid / cloudflare (hosted at home)
 - bun ts runtime
 - lazygit
 

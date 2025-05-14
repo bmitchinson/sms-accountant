@@ -1,7 +1,7 @@
-- cloud console
+- gcloud console
 - apis + services > create credentials > oauth client id
-  - application type: desktop app
-- wait 5 min
+  - application type: web application
+  - add "${HOST}/auth/oauth2callback" to your URL callbacks
 - apis + services > library
   - search for gmail api + enable it
 - apis + services > oauth consent screen > data access > add or remove scopes > "https://mail.google.com/" for complete gmail access
