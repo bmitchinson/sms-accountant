@@ -14,6 +14,7 @@ Results then stored using google sheets as a backend.
 - [ ] mark email as "processed"
 - [ ] sentry logs
 - [ ] prompt user over sms to categorize item
+- [ ] add docker build to cicd
 ... more in goal.md
 
 ### Tech

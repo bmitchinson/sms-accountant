@@ -49,6 +49,7 @@ Bun.serve({
                 const authUrl = oAuth2Client.generateAuthUrl({
                     access_type: 'offline',
                     scope: ['https://mail.google.com/'],
+                    prompt: 'consent', // include refresh token
                 });
                 return getHtmlResponse(
                     `<p>Please visit <a href="${authUrl}">this google sign in</a></p>`,
@@ -70,7 +71,9 @@ Bun.serve({
             await Bun.write(CREDENTIALS_PATH, JSON.stringify(tokens, null, 2));
             oAuth2Client.setCredentials(tokens);
 
-            return getHtmlResponse(`<p>Saved token and logged in ✅</p>`);
+            return getHtmlResponse(
+                `<p>Saved token and logged in ✅</p><a href="/mail">Check Mail</a>`,
+            );
         },
 
         '/mail': async () => getInboxContents(oAuth2Client),
