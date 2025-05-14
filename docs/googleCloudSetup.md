@@ -1,0 +1,14 @@
+- cloud console
+- apis + services > create credentials > oauth client id
+  - application type: desktop app
+- wait 5 min
+- apis + services > library
+  - search for gmail api + enable it
+- apis + services > oauth consent screen > data access > add or remove scopes > "https://mail.google.com/" for complete gmail access
+- apis + services > credentials > {name} > download json
+  - This file contains secret info, do not commit it
+  - GOOGLE_CLIENT_ID = json.installed.client_id
+  - GOOGLE_CLIENT_SECRET = json.installed.client_secret
+  - ^ set those in your .env file (see .env.example)  
+- apis + services > oauth consent screen > audience > test users + Add users
+  - Add the email that will sign into our app, to be allowed to have it's emails queried
