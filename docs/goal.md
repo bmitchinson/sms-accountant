@@ -48,7 +48,9 @@ configured should be used as the source to create a sheet copy
 - Sending my server “category” sends me all current configured categories
   - Categories are defined on a sheets page
 
-- Venmo has webhooks as an incoming message. (Email on any spend would be preferred to align w chase)
+- Venmo email parsing
+
+- Laurel road email parsing
 
 - Allow me to adjust the cost of a past purchase by a multiplier, to account for purchases I know I'm splitting
 and will eventually receive a credit for.
