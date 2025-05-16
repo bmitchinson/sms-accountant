@@ -17,3 +17,20 @@ export const CREDENTIALS_PATH = env
     .get('CREDENTIALS_PATH')
     .required()
     .asString();
+
+export const TWILIO_SID = env.get('TWILIO_SID').required().asString();
+
+export const TWILIO_AUTH_TOKEN = env
+    .get('TWILIO_AUTH_TOKEN')
+    .required()
+    .asString();
+
+export const RECIPIENT_CELL_NUM = env
+    .get('RECIPIENT_CELL_NUM')
+    .required()
+    .asString();
+
+export const SENDER_TWILIO_NUM = env
+    .get('SENDER_TWILIO_NUM')
+    .required()
+    .asString();

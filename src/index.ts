@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+// ^ I can get rid of that if I switch bun.serve to use the "fetch (req) property instead of routes."
+// then websocket empty functions can go away
 import { OAuth2Client } from 'google-auth-library';
 
 import {
@@ -8,13 +11,23 @@ import {
 } from './configuration';
 import { getHtmlResponse } from './utils/html';
 import chalk from 'chalk';
-import { getInboxContents, markEmailAsProcessed } from './gmail/gmail';
+import {
+    getAllUnprocessedChaseEmails,
+    getInboxContents,
+    markEmailAsProcessed,
+} from './gmail/gmail';
+
+import cron from 'node-cron';
+import { chaseEmailToTransaction } from './utils/chase';
+import { sendTransactionText } from './utils/twilio';
+import { gmail_v1 } from 'googleapis';
 
 const oAuth2Client = new OAuth2Client(
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
     `${HOST}/auth/oauth2callback`,
 );
+const gmailClient = new gmail_v1.Gmail({ auth: oAuth2Client });
 
 /*
 1. visit /auth/signin
@@ -31,6 +44,11 @@ A one-week gap in usage won’t invalidate a refresh token.
 
 Bun.serve({
     development: true, // i want the error log always
+    websocket: {
+        message() {},
+        open() {},
+        close() {},
+    },
     routes: {
         '/api/status': new Response('OK'),
 
@@ -76,22 +94,46 @@ Bun.serve({
             );
         },
 
-        '/mail': async () => getInboxContents(oAuth2Client),
+        '/mail': async () => getInboxContents(gmailClient),
 
-        '/mail/process': async (req) => {
-            const { searchParams } = new URL(req.url);
-            const id = searchParams.get('id');
-            if (!id) {
-                return new Response(
-                    'Missing id parameter of email to mark processed',
-                    {
-                        status: 400,
-                    },
-                );
-            }
-            return await markEmailAsProcessed(oAuth2Client, id);
-        },
+        '/runChaseJob': async () => await runChaseJob(),
     },
 });
 
 console.log(chalk.green(`Server running - ${HOST}/api/status`));
+
+const runChaseJob = async () => {
+    const chaseMessagesToProcess = await getAllUnprocessedChaseEmails(
+        gmailClient,
+    );
+    return await Promise.all(
+        chaseMessagesToProcess.map((msg) =>
+            sendTransactionText(chaseEmailToTransaction(msg)),
+        ),
+    )
+        .then(() =>
+            Promise.all(
+                chaseMessagesToProcess.map((msg) =>
+                    markEmailAsProcessed(gmailClient, msg.id),
+                ),
+            ),
+        )
+        .then(() => {
+            console.log(
+                `All ${chaseMessagesToProcess.length} Chase transaction text(s) sent + marked as processed`,
+            );
+            return getHtmlResponse(
+                `<p>All ${chaseMessagesToProcess.length} Chase transaction text(s) sent ✅</p>`,
+            );
+        });
+};
+
+cron.schedule('*/5 * * * *', async () => {
+    try {
+        console.log(chalk.green(`Chase cron started ... ✅`));
+        // await runChaseJob();
+        console.log(chalk.green(`Cron finished ✅`));
+    } catch (err) {
+        console.error('ERR -', new Date().toISOString(), '- Chase -', err);
+    }
+});

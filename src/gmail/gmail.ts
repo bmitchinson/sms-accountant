@@ -1,73 +1,98 @@
-import { OAuth2Client } from 'google-auth-library';
 import { gmail_v1 } from 'googleapis';
 import { getHtmlResponse } from '../utils/html';
+import type { EMail } from '../types';
+import type { GaxiosPromise } from '@googleapis/gmail';
 
 const PROCESSED_LABEL_ID = 'Label_5739774446986961459';
 
-export const getInboxContents = async (oAuth2Client: OAuth2Client) => {
-    const gmail = new gmail_v1.Gmail({ auth: oAuth2Client });
-    const listRes = await gmail.users.messages.list({
-        userId: 'me',
-        maxResults: 10,
-        // Exclude matches from your search criteria with a hyphen --> "-"
-        q: 'from:no.reply.alerts@chase.com -label:processed', // Filter for emails from Chase that haven't been processed
-    });
-
-    const messagesFound = listRes.data.messages || [];
-    if (messagesFound.length === 0) {
-        return getHtmlResponse(`<h3>Messages: </h3><p>No messages found</p>`);
-    }
-
-    const messagesDetails = [] as { id: string; subject: string }[];
-    for (const msg of messagesFound) {
-        if (msg.id) {
-            const msgRes = await gmail.users.messages.get({
-                userId: 'me',
-                id: msg.id,
-            });
-
-            // Extract the subject from the headers
-            let subject = '';
-            const headers = msgRes.data.payload?.headers || [];
-            for (const header of headers) {
-                if (header.name?.toLowerCase() === 'subject') {
-                    subject = header.value || '';
-                    break;
-                }
-            }
-
-            messagesDetails.push({
-                id: msg.id,
-                subject: subject,
-            });
+const getHeaderOfEmail = (email: gmail_v1.Schema$Message) => {
+    const headers = email?.payload?.headers || [];
+    for (const header of headers) {
+        if (header.name?.toLowerCase() === 'subject') {
+            return header.value || '';
         }
     }
-    const htmlList = messagesDetails
+    throw new Error(`Unable to find header of email ${email.id}`);
+};
+
+const getEmailsFromSearchResult = async (
+    gmailClient: gmail_v1.Gmail,
+    searchResult: gmail_v1.Schema$ListMessagesResponse,
+): Promise<EMail[]> => {
+    const emailsToFetch = searchResult.messages || [];
+
+    const fetchPromises = [] as GaxiosPromise<gmail_v1.Schema$Message>[];
+    for (const emailToFetch of emailsToFetch) {
+        emailToFetch.id &&
+            fetchPromises.push(
+                gmailClient.users.messages.get({
+                    userId: 'me',
+                    id: emailToFetch.id,
+                }),
+            );
+    }
+
+    return Promise.all(fetchPromises).then((emails) => {
+        return emails.map(({ data }) => ({
+            id: data.id || '',
+            subject: getHeaderOfEmail(data),
+            body: data?.payload?.body?.data
+                ? Buffer.from(data.payload.body.data, 'base64url').toString(
+                      'utf8',
+                  )
+                : '',
+            datetime: new Date(Number(data.internalDate)),
+        }));
+    });
+};
+
+export const getAllUnprocessedChaseEmails = async (
+    gmailClient: gmail_v1.Gmail,
+): Promise<EMail[]> => {
+    const searchResults = await gmailClient.users.messages.list({
+        userId: 'me',
+        maxResults: 500, // 500 is max
+        q: 'from:no.reply.alerts@chase.com -label:processed "transaction was more than the $0.01 level you set."',
+    });
+    return await getEmailsFromSearchResult(gmailClient, searchResults.data);
+};
+
+export const getInboxContents = async (gmailClient: gmail_v1.Gmail) => {
+    const searchResult = await gmailClient.users.messages.list({
+        userId: 'me',
+        maxResults: 100,
+    });
+
+    const emails = await getEmailsFromSearchResult(
+        gmailClient,
+        searchResult.data,
+    );
+    if (emails.length === 0) {
+        return getHtmlResponse(`<h3>Messages: </h3><p>No emails found</p>`);
+    }
+
+    const htmlList = emails
         .map(
-            (m) =>
-                `<li>${m.subject}</li><a href="/mail/process?id=${m.id}">Mark message processed</a>`,
+            (email) =>
+                `<li>${email.subject}</li><p>${email.datetime}</p><a href="/mail/process?id=${email.id}">Mark email processed</a>`,
         )
         .join('');
+
     return getHtmlResponse(`<h3>Messages: </h3><ul>${htmlList}</ul>`);
 };
 
 export const markEmailAsProcessed = async (
-    oAuth2Client: OAuth2Client,
+    gmailClient: gmail_v1.Gmail,
     messageId: string,
 ) => {
-    const gmail = new gmail_v1.Gmail({ auth: oAuth2Client });
-
     try {
-        await gmail.users.messages.modify({
+        await gmailClient.users.messages.modify({
             userId: 'me',
             id: messageId,
             requestBody: {
                 addLabelIds: [PROCESSED_LABEL_ID],
             },
         });
-        console.log(
-            `Email with ID ${messageId} successfully marked as processed`,
-        );
         return getHtmlResponse(`<p>email labeled processed</p>`);
     } catch (error) {
         console.error(`Error starring email with ID ${messageId}:`, error);
