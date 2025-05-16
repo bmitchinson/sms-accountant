@@ -9,7 +9,9 @@ Results then stored using google sheets as a backend.
 - [x] google auth - view your emails from my api as an auth test
 - [x] add tsc checking
 - [x] docker package + deployed (https://budget.mitchinson.dev)
-- [ ] parse chase emails
+- [x] parse chase emails
+- [x] send twilio texts reflecting recent chase transaction
+  - This is done, but I have to wait 3-5 business days before twilio can send a text ...
 - [ ] add parse result to google sheet
 - [ ] mark email as "processed"
 - [ ] sentry logs

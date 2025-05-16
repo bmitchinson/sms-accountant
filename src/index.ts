@@ -21,6 +21,8 @@ import cron from 'node-cron';
 import { chaseEmailToTransaction } from './utils/chase';
 import { sendTransactionText } from './utils/twilio';
 import { gmail_v1 } from 'googleapis';
+import { logError, logInfo, logSuccess } from './utils/logging';
+import type { EMail } from './types';
 
 const oAuth2Client = new OAuth2Client(
     GOOGLE_CLIENT_ID,
@@ -45,6 +47,7 @@ A one-week gap in usage won’t invalidate a refresh token.
 const loadToken = async () => {
     const tokenFile = Bun.file(CREDENTIALS_PATH);
     if (await tokenFile.exists()) {
+        logInfo('prior token loaded');
         const tokenText = await tokenFile.text();
         const token = JSON.parse(tokenText);
         oAuth2Client.setCredentials(token);
@@ -110,40 +113,62 @@ Bun.serve({
     },
 });
 
-console.log(chalk.green(`Server running - ${HOST}/api/status`));
+logSuccess(`server running - ${HOST}/api/status`);
 
 const runChaseJob = async () => {
-    const chaseMessagesToProcess = await getAllUnprocessedChaseEmails(
+    logInfo('starting chase job');
+    const chaseEMailsToProcess = await getAllUnprocessedChaseEmails(
         gmailClient,
     );
-    return await Promise.all(
-        chaseMessagesToProcess.map((msg) =>
-            sendTransactionText(chaseEmailToTransaction(msg)),
-        ),
-    )
-        .then(() =>
-            Promise.all(
-                chaseMessagesToProcess.map((msg) =>
-                    markEmailAsProcessed(gmailClient, msg.id),
-                ),
+
+    if (chaseEMailsToProcess.length == 0) {
+        logInfo('job ending early - no messages to process');
+        return getHtmlResponse(
+            `<p>Job ending early - no messages to process</p>`,
+        );
+    }
+
+    const textSendResults = await Promise.all(
+        chaseEMailsToProcess.map((email) =>
+            sendTransactionText(chaseEmailToTransaction(email)).then(
+                (textSent) => ({
+                    textSent: textSent,
+                    email,
+                }),
             ),
-        )
-        .then(() => {
-            console.log(
-                `All ${chaseMessagesToProcess.length} Chase transaction text(s) sent + marked as processed`,
-            );
-            return getHtmlResponse(
-                `<p>All ${chaseMessagesToProcess.length} Chase transaction text(s) sent ✅</p>`,
-            );
-        });
+        ),
+    );
+    const emailsToMarkAsSuccessfullyProcessed: EMail[] = [];
+    const emailsFailedToMarkAsProcessed: EMail[] = [];
+    textSendResults.forEach(({ textSent, email }) => {
+        textSent && emailsToMarkAsSuccessfullyProcessed.push(email);
+        !textSent && emailsFailedToMarkAsProcessed.push(email);
+    });
+
+    await Promise.all(
+        emailsToMarkAsSuccessfullyProcessed.map((email) =>
+            markEmailAsProcessed(gmailClient, email.id),
+        ),
+    ).then(
+        (r) =>
+            r.length > 0 &&
+            logSuccess(`${r.length} emails marked as processed`),
+    );
+
+    emailsFailedToMarkAsProcessed.length > 0 &&
+        logError(
+            'Chase Job',
+            `${emailsFailedToMarkAsProcessed.length} emails not marked as processed due to failure`,
+        );
+
+    return getHtmlResponse(`<p>Chase Job complete. see logs for details</p>`);
 };
 
 cron.schedule('*/5 * * * *', async () => {
     try {
-        console.log(chalk.green(`Chase cron started ... ✅`));
         // await runChaseJob();
-        console.log(chalk.green(`Cron finished ✅`));
+        // logSuccess('chase cron finished');
     } catch (err) {
-        console.error('ERR -', new Date().toISOString(), '- Chase -', err);
+        // logError('chase job', 'errored', err);
     }
 });
