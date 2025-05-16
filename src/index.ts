@@ -8,7 +8,7 @@ import {
 } from './configuration';
 import { getHtmlResponse } from './utils/html';
 import chalk from 'chalk';
-import { getInboxContents } from './gmail/gmail';
+import { getInboxContents, markEmailAsProcessed } from './gmail/gmail';
 
 const oAuth2Client = new OAuth2Client(
     GOOGLE_CLIENT_ID,
@@ -77,6 +77,20 @@ Bun.serve({
         },
 
         '/mail': async () => getInboxContents(oAuth2Client),
+
+        '/mail/process': async (req) => {
+            const { searchParams } = new URL(req.url);
+            const id = searchParams.get('id');
+            if (!id) {
+                return new Response(
+                    'Missing id parameter of email to mark processed',
+                    {
+                        status: 400,
+                    },
+                );
+            }
+            return await markEmailAsProcessed(oAuth2Client, id);
+        },
     },
 });
 
