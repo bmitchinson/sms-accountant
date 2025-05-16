@@ -13,10 +13,10 @@ Results then stored using google sheets as a backend.
 - [x] send twilio texts reflecting recent chase transaction
   - This is done, but I have to wait 3-5 business days before twilio can send a text ...
 - [ ] add parse result to google sheet
-- [ ] mark email as "processed"
+- [x] mark email as "processed"
 - [ ] sentry logs
 - [ ] prompt user over sms to categorize item
-- [ ] add docker build to cicd
+- [x] add docker build to cicd
 ... more in goal.md
 
 ### Tech
