@@ -7,7 +7,7 @@ Results then stored using google sheets as a backend.
 ### todos
 
 - [x] google auth - view your emails from my api as an auth test
-- [ ] add tsc checking
+- [x] add tsc checking
 - [x] docker package + deployed (https://budget.mitchinson.dev)
 - [ ] parse chase emails
 - [ ] add parse result to google sheet

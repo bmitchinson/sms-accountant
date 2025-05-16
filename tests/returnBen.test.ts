@@ -1,4 +1,5 @@
 import { returnBen } from '../src/utils/returnBen';
+import { test, expect } from 'bun:test';
 
 const result = returnBen();
 

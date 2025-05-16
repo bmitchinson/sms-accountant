@@ -38,7 +38,7 @@ Bun.serve({
             const tokenFile = Bun.file(CREDENTIALS_PATH);
             const { searchParams } = new URL(req.url);
             const reset = searchParams.get('reset');
-            if ((await tokenFile.exists()) & !reset) {
+            if ((await tokenFile.exists()) && !reset) {
                 const tokenText = await tokenFile.text();
                 const token = JSON.parse(tokenText);
                 oAuth2Client.setCredentials(token);
