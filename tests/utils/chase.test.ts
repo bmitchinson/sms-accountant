@@ -8,7 +8,8 @@ test('chaseEmailToTransaction parses 00 cent charges correctly', () => {
     const expectedResult: Transaction = {
         id: 'green buggy',
         amount: 91.0,
-        description: 'YMCA OF GREATER DES',
+        description: '',
+        originalDescription: 'YMCA OF GREATER DES',
         datetime: date,
         source: 'Chase',
     };

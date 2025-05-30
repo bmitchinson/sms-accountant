@@ -7,29 +7,28 @@ import {
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
     HOST,
-    CREDENTIALS_PATH,
+    GOOGLE_CREDENTIALS_PATH,
 } from './configuration';
 import { getHtmlResponse } from './utils/html';
-import chalk from 'chalk';
 import {
     getAllUnprocessedChaseEmails,
+    getGmailClient,
     getInboxContents,
     markEmailAsProcessed,
 } from './gmail/gmail';
 
 import cron from 'node-cron';
-import { chaseEmailToTransaction } from './utils/chase';
-import { sendTransactionText } from './utils/twilio';
+import { chaseEmailToTransaction, runChaseJob } from './utils/chase';
 import { gmail_v1 } from 'googleapis';
 import { logError, logInfo, logSuccess } from './utils/logging';
 import type { EMail } from './types';
+import { sendMessageFromBot } from './utils/telegram';
 
-const oAuth2Client = new OAuth2Client(
+export const oAuth2Client = new OAuth2Client(
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
     `${HOST}/auth/oauth2callback`,
 );
-const gmailClient = new gmail_v1.Gmail({ auth: oAuth2Client });
 
 /*
 1. visit /auth/signin
@@ -45,9 +44,9 @@ A one-week gap in usage won’t invalidate a refresh token.
 */
 
 const loadToken = async () => {
-    const tokenFile = Bun.file(CREDENTIALS_PATH);
+    const tokenFile = Bun.file(GOOGLE_CREDENTIALS_PATH);
     if (await tokenFile.exists()) {
-        logInfo('prior token loaded');
+        logInfo('prior google oauth token loaded');
         const tokenText = await tokenFile.text();
         const token = JSON.parse(tokenText);
         oAuth2Client.setCredentials(token);
@@ -99,7 +98,10 @@ Bun.serve({
                 );
             }
             const { tokens } = await oAuth2Client.getToken(code);
-            await Bun.write(CREDENTIALS_PATH, JSON.stringify(tokens, null, 2));
+            await Bun.write(
+                GOOGLE_CREDENTIALS_PATH,
+                JSON.stringify(tokens, null, 2),
+            );
             oAuth2Client.setCredentials(tokens);
 
             return getHtmlResponse(
@@ -107,68 +109,32 @@ Bun.serve({
             );
         },
 
-        '/mail': async () => getInboxContents(gmailClient),
+        '/runDbBackup': () =>
+            backupDb().then(() => {
+                return getHtmlResponse(`<p>Database backed up, see logs</p>`);
+            }),
 
-        '/runChaseJob': async () => await runChaseJob(),
+        '/mail': async () => getInboxContents(getGmailClient()),
+
+        '/runChaseJob': async () => {
+            logInfo('starting chase job: api kick');
+            return runChaseJob();
+        },
+
+        '/sendMsg': async () =>
+            sendMessageFromBot('Testing 123').then(() =>
+                getHtmlResponse(`<p>Msg Sent ✅</p>`),
+            ),
     },
 });
 
 logSuccess(`server running - ${HOST}/api/status`);
 
-const runChaseJob = async () => {
-    logInfo('starting chase job');
-    const chaseEMailsToProcess = await getAllUnprocessedChaseEmails(
-        gmailClient,
-    );
-
-    if (chaseEMailsToProcess.length == 0) {
-        logInfo('job ending early - no messages to process');
-        return getHtmlResponse(
-            `<p>Job ending early - no messages to process</p>`,
-        );
-    }
-
-    const textSendResults = await Promise.all(
-        chaseEMailsToProcess.map((email) =>
-            sendTransactionText(chaseEmailToTransaction(email)).then(
-                (textSent) => ({
-                    textSent: textSent,
-                    email,
-                }),
-            ),
-        ),
-    );
-    const emailsToMarkAsSuccessfullyProcessed: EMail[] = [];
-    const emailsFailedToMarkAsProcessed: EMail[] = [];
-    textSendResults.forEach(({ textSent, email }) => {
-        textSent && emailsToMarkAsSuccessfullyProcessed.push(email);
-        !textSent && emailsFailedToMarkAsProcessed.push(email);
-    });
-
-    await Promise.all(
-        emailsToMarkAsSuccessfullyProcessed.map((email) =>
-            markEmailAsProcessed(gmailClient, email.id),
-        ),
-    ).then(
-        (r) =>
-            r.length > 0 &&
-            logSuccess(`${r.length} emails marked as processed`),
-    );
-
-    emailsFailedToMarkAsProcessed.length > 0 &&
-        logError(
-            'Chase Job',
-            `${emailsFailedToMarkAsProcessed.length} emails not marked as processed due to failure`,
-        );
-
-    return getHtmlResponse(`<p>Chase Job complete. see logs for details</p>`);
-};
-
-cron.schedule('*/5 * * * *', async () => {
+cron.schedule('*/2 * * * *', async () => {
     try {
-        // await runChaseJob();
-        // logSuccess('chase cron finished');
+        logInfo('starting chase job: cron kick');
+        await runChaseJob();
     } catch (err) {
-        // logError('chase job', 'errored', err);
+        logError('chase job', 'errored', err);
     }
 });

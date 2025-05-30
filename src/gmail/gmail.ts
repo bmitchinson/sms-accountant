@@ -2,8 +2,19 @@ import { gmail_v1 } from 'googleapis';
 import { getHtmlResponse } from '../utils/html';
 import type { EMail } from '../types';
 import type { GaxiosPromise } from '@googleapis/gmail';
+import { oAuth2Client } from '..';
 
+// self: should be dynamic
 const PROCESSED_LABEL_ID = 'Label_5739774446986961459';
+
+let gmailClient;
+
+export const getGmailClient = () => {
+    if (!gmailClient) {
+        gmailClient = new gmail_v1.Gmail({ auth: oAuth2Client });
+    }
+    return gmailClient;
+};
 
 const getHeaderOfEmail = (email: gmail_v1.Schema$Message) => {
     const headers = email?.payload?.headers || [];
@@ -86,14 +97,13 @@ export const markEmailAsProcessed = async (
     messageId: string,
 ) => {
     try {
-        await gmailClient.users.messages.modify({
+        return gmailClient.users.messages.modify({
             userId: 'me',
             id: messageId,
             requestBody: {
                 addLabelIds: [PROCESSED_LABEL_ID],
             },
         });
-        return getHtmlResponse(`<p>email labeled processed</p>`);
     } catch (error) {
         console.error(`Error starring email with ID ${messageId}:`, error);
         throw error;
