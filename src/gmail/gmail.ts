@@ -3,17 +3,37 @@ import { getHtmlResponse } from '../utils/html';
 import type { EMail } from '../types';
 import type { GaxiosPromise } from '@googleapis/gmail';
 import { oAuth2Client } from '..';
+import { logInfo } from '../utils/logging';
+import { GMAIL_LABEL_NAME_TO_INDICATE_EMAIL_PROCESSED } from '../configuration';
 
-// self: should be dynamic
-const PROCESSED_LABEL_ID = 'Label_5739774446986961459';
-
-let gmailClient;
+let _gmailClient: null | gmail_v1.Gmail;
 
 export const getGmailClient = () => {
-    if (!gmailClient) {
-        gmailClient = new gmail_v1.Gmail({ auth: oAuth2Client });
+    if (!_gmailClient) {
+        _gmailClient = new gmail_v1.Gmail({ auth: oAuth2Client });
+        logInfo('gmail client initialized');
     }
-    return gmailClient;
+    return _gmailClient;
+};
+
+let _labelIdOfProcessedEmails: null | string;
+
+export const getLabelIdOfProcessedEmails = async () => {
+    if (!_labelIdOfProcessedEmails) {
+        _labelIdOfProcessedEmails = getGmailClient()
+            .users.labels.list({
+                userId: 'me',
+            })
+            .then(
+                ({ data }) =>
+                    data.labels?.find(
+                        (label) =>
+                            label.name ===
+                            GMAIL_LABEL_NAME_TO_INDICATE_EMAIL_PROCESSED,
+                    )?.id,
+            );
+    }
+    return _labelIdOfProcessedEmails;
 };
 
 const getHeaderOfEmail = (email: gmail_v1.Schema$Message) => {
@@ -63,11 +83,12 @@ export const getAllUnprocessedChaseEmails = async (
     const searchResults = await gmailClient.users.messages.list({
         userId: 'me',
         maxResults: 500, // 500 is max
-        q: 'from:no.reply.alerts@chase.com -label:processed "transaction was more than the $0.01 level you set."',
+        q: `from:no.reply.alerts@chase.com -label:${GMAIL_LABEL_NAME_TO_INDICATE_EMAIL_PROCESSED} "transaction was more than the $0.01 level you set."`,
     });
     return await getEmailsFromSearchResult(gmailClient, searchResults.data);
 };
 
+// this is just used to debug some auth stuff, not part of any routine processing
 export const getInboxContents = async (gmailClient: gmail_v1.Gmail) => {
     const searchResult = await gmailClient.users.messages.list({
         userId: 'me',
@@ -97,15 +118,30 @@ export const markEmailAsProcessed = async (
     messageId: string,
 ) => {
     try {
+        const labelsResponse = await gmailClient.users.labels.list({
+            userId: 'me',
+        });
+
+        const processedLabel = labelsResponse.data.labels?.find(
+            (label) => label.name === 'processed',
+        );
+
+        if (!processedLabel?.id) {
+            throw new Error('Could not find "processed" label');
+        }
+
         return gmailClient.users.messages.modify({
             userId: 'me',
             id: messageId,
             requestBody: {
-                addLabelIds: [PROCESSED_LABEL_ID],
+                addLabelIds: [await getLabelIdOfProcessedEmails()],
             },
         });
     } catch (error) {
-        console.error(`Error starring email with ID ${messageId}:`, error);
+        console.error(
+            `Error marking email as processed with ID ${messageId}:`,
+            error,
+        );
         throw error;
     }
 };

@@ -11,7 +11,7 @@ export const makeTxtMsgContents = (transaction: Transaction) =>
     `
 Transaction: ${transaction.id}
 Amount: $${transaction.amount}
-Description: ${transaction.description}
+Description: ${transaction.originalDescription}
 Date: ${transaction.datetime.toLocaleString()}
 Source: ${transaction.source}
 `.trim();

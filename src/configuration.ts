@@ -35,3 +35,8 @@ export const TELEGRAM_RECIPIENT_ID = env
     .get('TELEGRAM_RECIPIENT_ID')
     .required()
     .asInt();
+
+export const GMAIL_LABEL_NAME_TO_INDICATE_EMAIL_PROCESSED = env
+    .get('GMAIL_LABEL_NAME_TO_INDICATE_EMAIL_PROCESSED')
+    .required()
+    .asString();

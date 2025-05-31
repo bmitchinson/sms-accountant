@@ -130,10 +130,10 @@ Bun.serve({
 
 logSuccess(`server running - ${HOST}/api/status`);
 
-cron.schedule('*/2 * * * *', async () => {
+cron.schedule('*/5 * * * *', async () => {
     try {
-        logInfo('starting chase job: cron kick');
-        await runChaseJob();
+        // logInfo('starting chase job: cron kick');
+        // await runChaseJob();
     } catch (err) {
         logError('chase job', 'errored', err);
     }

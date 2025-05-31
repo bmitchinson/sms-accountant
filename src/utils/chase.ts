@@ -1,3 +1,4 @@
+import { GMAIL_LABEL_NAME_TO_INDICATE_EMAIL_PROCESSED } from '../configuration';
 import {
     getAllUnprocessedChaseEmails,
     getGmailClient,
@@ -10,8 +11,10 @@ import { sendMessageFromBot } from './telegram';
 import { makeTxtMsgContents } from './transaction';
 
 export const chaseEmailToTransaction = (email: EMail): Transaction => {
-    const matcher = /Your \$(\d+\.\d{2}) transaction with (.+)/;
-    const match = email.subject.match(matcher);
+    // email.subject = "Your $1,227.15 transaction with COUNTRY AUTOMOTIVE I"
+    const match = email.subject.match(/Your \$(.+?) transaction with (.+)/);
+    const price = match[1]; // "9.61"
+    const descriptionFromChase = match[2]; // "AMAZON MKTPLACE PMTS"
 
     if (!match) {
         throw new Error(
@@ -22,10 +25,10 @@ export const chaseEmailToTransaction = (email: EMail): Transaction => {
     return {
         id: 'green buggy', // todo: replace w 2 word generation, do this at db level
         // @ts-expect-error missing match is already checked above
-        amount: parseFloat(match[1]),
+        amount: parseFloat(price),
         // @ts-expect-error missing match is already checked above
         description: '',
-        originalDescription: match[2].trim(),
+        originalDescription: descriptionFromChase.trim(),
         datetime: email.datetime,
         source: 'Chase',
     };
@@ -52,37 +55,18 @@ export const runChaseJob = async () => {
         chaseItemsToProcess.map(({ transaction, email }) =>
             sendMessageFromBot(makeTxtMsgContents(transaction))
                 .then(() => {
-                    logSuccess(`sent telegram msg for "${transaction.id}"`);
+                    logSuccess(
+                        `sent telegram msg for "${transaction.id}" - "${transaction.originalDescription}"`,
+                    );
                     return markEmailAsProcessed(getGmailClient(), email.id);
                 })
                 .then(() => {
-                    logSuccess(`marked the email as process`);
+                    logSuccess(
+                        `marked the email as processed (label: ${GMAIL_LABEL_NAME_TO_INDICATE_EMAIL_PROCESSED})`,
+                    );
                 }),
         ),
     );
-
-    // const emailsToMarkAsSuccessfullyProcessed: EMail[] = [];
-    // const emailsFailedToMarkAsProcessed: EMail[] = [];
-    // textSendResults.forEach(({ textSent, email }) => {
-    //     textSent && emailsToMarkAsSuccessfullyProcessed.push(email);
-    //     !textSent && emailsFailedToMarkAsProcessed.push(email);
-    // });
-
-    // await Promise.all(
-    //     emailsToMarkAsSuccessfullyProcessed.map((email) =>
-    //         markEmailAsProcessed(getGmailClient(), email.id),
-    //     ),
-    // ).then(
-    //     (r) =>
-    //         r.length > 0 &&
-    //         logSuccess(`${r.length} emails marked as processed`),
-    // );
-
-    // emailsFailedToMarkAsProcessed.length > 0 &&
-    //     logError(
-    //         'Chase Job',
-    //         `${emailsFailedToMarkAsProcessed.length} emails not marked as processed due to failure`,
-    //     );
 
     return getHtmlResponse(`<p>Chase Job complete. see logs for details</p>`);
 };
